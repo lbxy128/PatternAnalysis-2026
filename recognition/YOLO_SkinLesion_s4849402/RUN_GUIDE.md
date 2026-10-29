@@ -1,0 +1,64 @@
+# 运行顺序
+
+在 `recognition/YOLO_SkinLesion_s4849402/` 目录执行。以下真实训练命令尚需完整数据；不要把合成测试数据结果当成模型性能。
+
+## 1. 环境
+
+学校已有可用 PyTorch/CUDA 时保留它，在项目环境安装 `python -m pip install -r requirements.txt`，然后 `python check_environment.py --training`。本地 `.venv` 只用于 CPU 软件验证，不上传。
+
+## 2. 准备数据
+
+将官方训练、验证图像包与 Part1 masks 解压到 `/path/to/isic2017_raw`，同时放入对应 `Part3_GroundTruth.csv`。脚本递归查找文件名；重复文件名会报错，不随意选一个。
+
+用户于 2026-10-29 反馈已确认可沿用 ISIC 官方划分。项目使用该协议并保留确认说明，程序本身没有患者映射，也不声称核验了患者身份。
+
+```bash
+python prepare_isic.py --source /path/to/isic2017_raw --output /path/to/isic2017_yolo --split-evidence "User reports tutor confirmation on 2026-10-29: use official ISIC 2017 splits"
+```
+
+默认只准备 train/val；准备最终测试数据时提供所有对应文件并显式加 `--include-test`，输出到一个新目录。不要修改 train/val 成员。测试集标签不参与参数或阈值选择。
+
+这会保存 `manifest_official.csv`、YOLO 标签和 `audit.json`；检查官方类别与划分、空 mask、尺寸和重复解码图像，不伪造患者 ID。若真实数据发现重复，先调查并记录统一处理决定，不直接关闭检查。
+
+## 3. 检查模型
+
+```bash
+python modules.py --weights yolov8n.pt
+```
+
+输出三类名称、检测头类别数、参数量及软件版本。第一次运行可能下载预训练权重；它不是已经训练好的病灶检测器。
+
+## 4. 短训与正式对比
+
+```bash
+python train.py --data /path/to/isic2017_yolo/data.yaml --output runs/smoke640 --epochs 2 --imgsz 640 --batch 8 --device 0
+python train.py --data /path/to/isic2017_yolo/data.yaml --output runs/baseline640 --epochs 50 --imgsz 640 --batch 8 --device 0
+python train.py --data /path/to/isic2017_yolo/data.yaml --output runs/compare960 --epochs 50 --imgsz 960 --batch 8 --device 0
+```
+
+每次从相同预训练起点重新训练。50 epochs/batch 8 是暂定预算，按短训测量后统一确定。输出目录不能预先存在，避免混淆实验。训练没有自动测试步骤。正式对比不启用早停；保存默认验证 fitness 选择的 best.pt，并保留 results.csv、args.yaml 和自定义实验记录以核对该版本选择规则。
+
+## 5. 预测与评估
+
+```bash
+python predict.py --weights runs/baseline640/weights/best.pt --source /path/to/images --output runs/predictions640 --imgsz 640 --conf 0.25 --device 0
+python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/isic2017_yolo/data.yaml --output runs/validation640 --split val --imgsz 640 --threshold-sweep --device 0
+```
+
+0.25 仅为演示分数阈值。验证集扫描的预定示例规则是优先满足 melanoma recall >= 0.9，再比较总体精确率/误报；这是实验规则，不是临床安全保证。未达到时报告 unmet，不假装选出了合格阈值。
+
+```bash
+python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/isic2017_yolo/data.yaml --output runs/test640 --split test --imgsz 640 --device 0
+```
+
+测试数据需先准备好；锁定实验方案之后才运行。测试集禁止 `--threshold-sweep`。mAP 使用低置信度截断形成 PR 曲线，不使用高部署阈值。网络速度辅助函数只测前向计算，不包括 NMS、读盘和可视化。
+
+要报告固定工作点的 Precision/Recall 和 IoU >= 0.8 检出比例，额外传入 `--operating-conf`，其数值必须来自已锁定的验证集选择。例如已选定 0.35 时加 `--operating-conf 0.35`；这个数字仅为用法示例，不是已选结果。
+
+## 6. 本地逻辑检查
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+这些测试使用合成图片/框，不是患者数据或真实 benchmark。完整 ISIC 训练、实际 GPU 吞吐、失败病例分析仍待完成。
