@@ -63,6 +63,19 @@ python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/is
 
 ## 6. 本地逻辑检查
 
+### 使用已有预测做失败案例与固定阈值分析
+
+先检查 `runs/val640_analysis/`、`runs/val960_analysis/` 中是否有 `val_predictions.json`（旧版本可能名为 `validation_predictions.json`，按实际文件传参）。不需要重新加载模型或消耗 GPU 推理。
+
+```bash
+python analyze_failures.py --data ~/comp3710-data/isic2017/yolo/data.yaml --predictions runs/val640_analysis/val_predictions.json --output runs/failures640_conf015 --conf 0.15
+python analyze_failures.py --data ~/comp3710-data/isic2017/yolo/data.yaml --predictions runs/val960_analysis/val_predictions.json --output runs/failures960_conf015 --conf 0.15
+```
+
+输出 `failure_summary.json`（包括 IoU 0.5/0.8 工作点）、`all_cases.json`、最多五张候选叠加图和待人工填写的 `case_review.md`。该工具明确限定为验证集、一图一 GT 病灶。症状分类不能自动证明毛发/低对比度等物理原因。
+
+0.15 是查看验证结果后提出的探索性共同工作点；不表示原 recall >= 0.9 目标已满足。完整进度见 `reports/PROJECT_PLAN.md`。
+
 ```bash
 python -m unittest discover -s tests -v
 ```
