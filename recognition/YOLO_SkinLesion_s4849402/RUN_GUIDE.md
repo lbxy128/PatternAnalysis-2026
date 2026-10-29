@@ -20,6 +20,12 @@ python prepare_isic.py --source /path/to/isic2017_raw --output /path/to/isic2017
 
 这会保存 `manifest_official.csv`、YOLO 标签和 `audit.json`；检查官方类别与划分、空 mask、尺寸和重复解码图像，不伪造患者 ID。若真实数据发现重复，先调查并记录统一处理决定，不直接关闭检查。
 
+### 已发现的训练/验证重复
+
+学校运行发现 `ISIC_0012970`（train）与 `ISIC_0012127`（val）解码像素一致，诊断均为 nevus。用户全量扫描反馈仅一组重复。保留验证集原成员，从训练清单排除重复训练图；原图不删除。预期处理后 train=1999、val=150。
+
+在导入命令中增加 `--duplicate-audit ~/comp3710-data/isic2017/duplicate_audit.json`。导入器重新核对报告成员、划分、像素和类别，只自动处理训练与单个 held-out 成员的同类重复组。其他重复和类别冲突仍报错；排除记录、来源报告及哈希写入输出目录，后续全部模型使用同一处理后的划分。
+
 ## 3. 检查模型
 
 ```bash

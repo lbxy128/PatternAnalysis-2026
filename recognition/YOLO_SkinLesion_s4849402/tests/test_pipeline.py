@@ -1,4 +1,5 @@
 import csv
+import json
 import sys
 import tempfile
 import unittest
@@ -12,7 +13,7 @@ from dataset import audit_manifest, export, mask_to_box
 from evaluate import choose_threshold, operating_metrics
 from modules import CLASS_NAMES
 from train import TrainConfig, validate_training_data
-from prepare_isic import prepare
+from prepare_isic import prepare, resolve_train_overlap
 
 
 def fixture(root):
@@ -40,6 +41,37 @@ def fixture(root):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_train_overlap_removed_without_changing_validation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            fixture(root)
+            (root / 'sample1.jpg').write_bytes((root / 'sample0.jpg').read_bytes())
+            rows = [{'image_id': 'sample0', 'split': 'train', 'class_id': 2, 'image_path': root/'sample0.jpg'},
+                    {'image_id': 'sample1', 'split': 'val', 'class_id': 2, 'image_path': root/'sample1.jpg'},
+                    {'image_id': 'unique', 'split': 'train', 'class_id': 0, 'image_path': root/'unused.jpg'}]
+            report = root/'duplicates.json'
+            report.write_text(json.dumps([[{'image_id': 'sample0', 'split': 'train'},
+                                           {'image_id': 'sample1', 'split': 'val'}]]))
+            kept, exclusions = resolve_train_overlap(rows, report)
+            self.assertEqual([r['image_id'] for r in kept], ['sample1', 'unique'])
+            self.assertEqual(exclusions[0]['excluded_image_id'], 'sample0')
+            self.assertTrue((root/'sample0.jpg').exists())
+            rows[1]['class_id'] = 1
+            with self.assertRaisesRegex(ValueError, 'conflicting'):
+                resolve_train_overlap(rows, report)
+
+    def test_false_duplicate_report_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            fixture(root)
+            rows = [{'image_id': f'sample{i}', 'split': split, 'class_id': 0,
+                     'image_path': root/f'sample{i}.jpg'} for i, split in enumerate(('train', 'val'))]
+            report = root/'duplicates.json'
+            report.write_text(json.dumps([[{'image_id': 'sample0', 'split': 'train'},
+                                           {'image_id': 'sample1', 'split': 'val'}]]))
+            with self.assertRaisesRegex(ValueError, 'not pixel-identical'):
+                resolve_train_overlap(rows, report)
+
     def test_archive_import(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
