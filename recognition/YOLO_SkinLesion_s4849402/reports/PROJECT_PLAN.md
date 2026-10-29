@@ -98,4 +98,10 @@ Check-off：已提供一页评估与讨论准备；用户反馈划分方案已�
 - 学校实验：项目下 `runs/`；权重在各实验的 `weights/best.pt`。
 - 本地代码：`C:/Users/16211/Desktop/COMP3710/finlal/PatternAnalysis-2026/recognition/YOLO_SkinLesion_s4849402/`
 
-下一项独立代码任务：添加 `analyze_failures.py`，读取已保存的验证集预测，不重新训练，生成固定阈值指标和失败案例候选。
+## 最新推进
+
+`analyze_failures.py` 已实现，合计 14 项测试通过。用户已在学校完成 960、阈值 0.15 的验证集分析：melanoma 在 IoU 0.5 下 TP=16/FP=10/FN=14，在 IoU 0.8 下 TP=5/FP=21/FN=25。五张真实候选图已下载并完成视觉复核，见 `VALIDATION_CASE_REVIEW.md`，区分直接观察和未经验证的原因。
+
+下一步：补齐 640 同阈值指标及两组资源 JSON，备份全部结果；检查剩余空间，随后准备并审查最终测试数据。测试前锁定实验方案，不根据测试成绩调阈值。
+
+后续更新：640 同阈值结果已由学生提供，melanoma 在 IoU 0.5 下 TP=11/FP=7/FN=19，在 IoU 0.8 下 TP=8/FP=10/FN=22。两组固定工作点已齐；更严格定位下 640 优于 960 的这一指标。详细对比与测试前固定协议见 `TEST_PROTOCOL.md`。学校剩余约 11GB，准备测试前需释放下载缓存并采用不重复复制图像的导出方式。真实测试仍未开始。

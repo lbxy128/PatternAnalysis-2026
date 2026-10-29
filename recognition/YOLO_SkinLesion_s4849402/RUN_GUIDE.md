@@ -63,6 +63,18 @@ python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/is
 
 ## 6. 本地逻辑检查
 
+### 准备最终测试数据（不复制训练图片）
+
+在测试协议锁定后运行；测试原文件名含 `Test_v2`，不需改名。
+
+```bash
+python prepare_test.py --archives ~/comp3710-data/isic2017/archives --raw ~/comp3710-data/isic2017/test_raw --training-data ~/comp3710-data/isic2017/yolo --output ~/comp3710-data/isic2017/test_yolo
+```
+
+脚本读取 600 条官方测试标签，仅校验/解压对应图像与病灶 mask。对照实际使用的训练/验证图片计算解码哈希，将重叠测试样本及测试集内部重复隔离并记录；标签冲突则停止。原始数据和已训练模型不修改。若排除了测试样本，最终成绩必须标注为排重后的测试子集。
+
+通过同文件系统硬链接将测试图像导出，输出目录不能预先存在；不支持硬链接时会报错，不偷偷复制大图。解压中断后可复用 CRC 校验一致的原始文件。查看输出 `audit.json` 后再运行测试；评估 `--data` 使用新的 `test_yolo/data.yaml`，两组使用同一测试清单和已固定阈值。详见 `reports/TEST_PROTOCOL.md`。
+
 ### 使用已有预测做失败案例与固定阈值分析
 
 先检查 `runs/val640_analysis/`、`runs/val960_analysis/` 中是否有 `val_predictions.json`（旧版本可能名为 `validation_predictions.json`，按实际文件传参）。不需要重新加载模型或消耗 GPU 推理。

@@ -50,6 +50,8 @@ The class order above is an example: map diagnoses explicitly before export. The
 
 ## Planned experiments and report
 
+The 640 and 960 GPU runs have now completed according to the student's terminal outputs. See `reports/PROJECT_PLAN.md` for the reported validation comparison and remaining tasks, and `reports/VALIDATION_CASE_REVIEW.md` for five visually reviewed 960 validation examples. These are validation findings; final test evaluation and import of the original school-side experiment files remain pending.
+
 See `RUN_GUIDE.md` for the implemented entry points and `CODE_BLUEPRINT.md` for the initial interface design. The planned first comparison fixes YOLOv8n and changes input size from 640 to 960 only; real-data training remains pending resource checks.
 
 - Baseline: pretrained YOLOv8n with standard fine-tuning. Proposed experiment: change resolution or augmentation one factor at a time under identical splits and budgets. Confirm comparison and pretrained adaptation expectations with tutor.
