@@ -2,7 +2,7 @@
 
 Model: YOLOv8n fine-tuned at 960 input resolution. Confidence threshold: 0.15. Dataset: ISIC 2017 validation split, 150 images. These examples are validation diagnostics, not final test results.
 
-Evidence: five exported overlays supplied by the student and the corresponding terminal summary from `analyze_failures.py`. The full school-side `failure_summary.json` has not yet been imported locally. Scores below are rounded values displayed on the overlays; exact box coordinates and IoUs must be taken from that JSON, not estimated from the resized figures. Green boxes are ground truth and red boxes are predictions. Ground-truth diagnoses are dataset annotations, not diagnoses inferred in this review.
+Evidence: exported overlays and the original school-side `failure_summary.json`, now verified in final_results_backup.zip. Scores below are rounded overlay values. Verified geometric IoUs are 0.9363 (0012099, wrong class), 0.3378 (0012143), 0.9423 (0012151, melanoma box) and 0.7451 (0013501). Ground-truth diagnoses are dataset annotations, not diagnoses inferred in this review. Green boxes are ground truth and red boxes are predictions.
 
 The automated selector sought different error categories, prioritized melanoma within categories, and ordered candidates by image ID. The five images illustrate possible failure modes; they are not a random sample or a basis for estimating prevalence.
 

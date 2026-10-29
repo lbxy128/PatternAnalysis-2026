@@ -4,6 +4,21 @@
 
 ## 1. 环境
 
+若 CUDA 张量运算通过但 cuDNN 卷积报动态库加载失败，在当前 Linux 终端补充安装库目录，再测试真实卷积；不要立即重装学校 PyTorch：
+
+```bash
+export LD_LIBRARY_PATH="$(python - <<'PY'
+import sys
+from pathlib import Path
+folders = [str(p.resolve()) for root in sys.path for p in Path(root).glob('nvidia/*/lib') if p.is_dir()]
+print(':'.join(dict.fromkeys(folders)))
+PY
+)${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+python -c "import torch; m=torch.nn.Conv2d(3,16,3,padding=1).cuda(); m(torch.randn(2,3,64,64,device='cuda')).square().mean().backward(); torch.cuda.synchronize(); print('Convolution forward/backward passed')"
+```
+
+该设置仅作用于当前终端。仍报错时检查缺失依赖，不盲目关闭 cuDNN 或改变实验参数。
+
 学校已有可用 PyTorch/CUDA 时保留它，在项目环境安装 `python -m pip install -r requirements.txt`，然后 `python check_environment.py --training`。本地 `.venv` 只用于 CPU 软件验证，不上传。
 
 ## 2. 准备数据
@@ -62,6 +77,15 @@ python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/is
 要报告固定工作点的 Precision/Recall 和 IoU >= 0.8 检出比例，额外传入 `--operating-conf`，其数值必须来自已锁定的验证集选择。例如已选定 0.35 时加 `--operating-conf 0.35`；这个数字仅为用法示例，不是已选结果。
 
 ## 6. 本地逻辑检查
+
+### 补充平均定位 IoU（不重跑推理）
+
+```bash
+python summarize_iou.py --data ~/comp3710-data/isic2017/test_yolo/data.yaml --predictions runs/test640_final/test_predictions.json --output runs/test640_final/localization_iou.json --conf 0.15
+python summarize_iou.py --data ~/comp3710-data/isic2017/test_yolo/data.yaml --predictions runs/test960_final/test_predictions.json --output runs/test960_final/localization_iou.json --conf 0.15
+```
+
+读取现有预测和标签，输出 IoU >= 0.5 正确类别匹配框的条件均值，以及把漏检记为 0 的全 GT 均值。二者都明确给出分母，不能混作 IoU >= 0.8 检出率。不会使用测试集改阈值或模型。
 
 ### 准备最终测试数据（不复制训练图片）
 
