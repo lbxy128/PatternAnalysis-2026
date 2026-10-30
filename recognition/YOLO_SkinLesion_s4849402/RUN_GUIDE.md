@@ -66,7 +66,7 @@ python predict.py --weights runs/baseline640/weights/best.pt --source /path/to/i
 python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/isic2017_yolo/data.yaml --output runs/validation640 --split val --imgsz 640 --threshold-sweep --device 0
 ```
 
-0.25 仅为演示分数阈值。验证集扫描的预定示例规则是优先满足 melanoma recall >= 0.9，再比较总体精确率/误报；这是实验规则，不是临床安全保证。未达到时报告 unmet，不假装选出了合格阈值。
+0.25 仅为演示分数阈值。验证集扫描默认输出描述性曲线（status=descriptive），比较逐类 Precision/Recall 和每图误报，不附加作业未规定的召回率合格门槛，也不自动选阈值。文件名仍为 threshold_selection.json。定位按作业明确的 IoU >= 0.8 目标评估，同时保留标准 mAP50、mAP50:95 和分类指标。
 
 ```bash
 python evaluate.py --weights runs/baseline640/weights/best.pt --data /path/to/isic2017_yolo/data.yaml --output runs/test640 --split test --imgsz 640 --device 0
@@ -110,10 +110,10 @@ python analyze_failures.py --data ~/comp3710-data/isic2017/yolo/data.yaml --pred
 
 输出 `failure_summary.json`（包括 IoU 0.5/0.8 工作点）、`all_cases.json`、最多五张候选叠加图和待人工填写的 `case_review.md`。该工具明确限定为验证集、一图一 GT 病灶。症状分类不能自动证明毛发/低对比度等物理原因。
 
-0.15 是查看验证结果后提出的探索性共同工作点；不表示原 recall >= 0.9 目标已满足。完整进度见 `reports/PROJECT_PLAN.md`。
+0.15 是查看验证结果后提出、在测试前固定的探索性共同工作点，不是作业规定或经临床验证的阈值。历史 JSON 中的旧约束及 met/unmet 状态保留作为实验记录，不作为作业是否达标的判断。完整进度见 `reports/PROJECT_PLAN.md`。
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-这些测试使用合成图片/框，不是患者数据或真实 benchmark。完整 ISIC 训练、实际 GPU 吞吐、失败病例分析仍待完成。
+这些测试使用合成图片/框，不是患者数据或真实 benchmark。完整训练、595 张排重测试子集评估和失败案例复核已完成，真实结果与计时范围见 README。

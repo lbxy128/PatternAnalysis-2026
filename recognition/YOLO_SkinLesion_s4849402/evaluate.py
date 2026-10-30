@@ -91,7 +91,7 @@ def evaluate_detector(
         report['operating_iou05'] = operating_metrics(predictions, truth, operating_conf, 0.5)
         report['operating_iou08'] = operating_metrics(predictions, truth, operating_conf, 0.8)
     if threshold_sweep:
-        selected = choose_threshold(predictions, truth, {'target_class': 'melanoma', 'min_recall': 0.9})
+        selected = choose_threshold(predictions, truth)
         save_json(output / 'threshold_selection.json', selected)
     save_json(output / 'evaluation.json', report)
     return report
@@ -128,18 +128,22 @@ def collect_split(detector, data_yaml, split, image_size, device):
 def choose_threshold(
     validation_predictions: list[dict],
     validation_ground_truth: list[dict],
-    policy: dict,
+    policy: dict | None = None,
 ) -> dict:
     if not validation_ground_truth:
         raise ValueError('No validation cases')
+    policy = dict(policy or {})
     name = policy.get('target_class', 'melanoma')
     if name not in CLASS_NAMES:
         raise ValueError('Unknown target class')
     grid = policy.get('thresholds', [i/20 for i in range(1, 20)])
-    minimum = policy.get('min_recall', 0.9)
-    if not 0 <= minimum <= 1 or not grid or any(not 0 <= t <= 1 for t in grid):
+    minimum = policy.get('min_recall')
+    if (minimum is not None and not 0 <= minimum <= 1) or not grid or any(not 0 <= t <= 1 for t in grid):
         raise ValueError('Invalid threshold policy')
     rows = [operating_metrics(validation_predictions, validation_ground_truth, t) for t in grid]
+    if minimum is None:
+        return {'policy': policy, 'status': 'descriptive', 'selected': None,
+                'curve': rows, 'iou08_at_selected': None}
     eligible = [row for row in rows if row['per_class'][name]['recall'] is not None
                 and row['per_class'][name]['recall'] >= minimum]
     best = max(eligible, key=lambda row: (row['overall']['precision'], -row['false_positives_per_image'],

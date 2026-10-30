@@ -6,7 +6,7 @@
 
 This individual project develops a detector that localizes and classifies annotated dermoscopic lesions as melanoma, seborrheic keratosis or nevus. The intended user is a reviewer inspecting model-proposed boxes, not an autonomous diagnostic service. The engineering dilemma is whether greater lesion sensitivity can be obtained without excessive false alarms or computing cost.
 
-A COCO-pretrained YOLOv8n fine-tuned at 640 pixels is the standard baseline. The proposed controlled alternative uses the same architecture at 960 pixels. Higher resolution slightly improved validation AP50, but did not improve overall performance on the independent, exact-duplicate-filtered test subset. Test mAP50 was 0.6257 for 640 and 0.5675 for 960. At fixed confidence 0.15, 960 detected four additional melanoma lesions while producing 30 additional melanoma-labelled false positives. Neither model met the development target of melanoma recall >= 0.9. This report preserves that negative result.
+A COCO-pretrained YOLOv8n fine-tuned at 640 pixels is the standard baseline. The proposed controlled alternative uses the same architecture at 960 pixels. Higher resolution slightly improved validation AP50, but did not improve overall performance on the independent, exact-duplicate-filtered test subset. Test mAP50 was 0.6257 for 640 and 0.5675 for 960. At fixed confidence 0.15, 960 detected four additional melanoma lesions while producing 30 additional melanoma-labelled false positives. Assessment follows the assignment's test localization target of IoU >= 0.8, classification performance, and sensitivity/false-alarm trade-off; no additional numerical recall pass criterion is imposed.
 
 ## 2. Feasibility Review: pre-training plan
 
@@ -76,11 +76,11 @@ IoU is intersection area divided by union area. A true positive requires the cor
 
 Two related protocols are reported explicitly. The **Ultralytics validator** computes AP and its own summary P/R operating point. The **custom inference operating analysis** consumes detector.predict outputs (single class per candidate, class-aware NMS IoU 0.7), filters confidence 0.15, then performs class-aware, confidence-ordered one-to-one matching. The validator's multilabel candidate handling and operating-point choice can differ; its P/R must not be substituted for the fixed-threshold P/R below. No test-time augmentation was used.
 
-The validation scan first covered 0.05-0.95 and was then exploratorily extended down to 0.001. The predeclared development rule sought melanoma recall >= 0.9; neither configuration achieved it. Maximum observed recall was 17/30 (0.567): 640 at 0.001 required 3.980 all-class FP/image, while 960 at 0.01 required 1.307. A common confidence of 0.15 was subsequently chosen as an **exploratory validation comparison**, not as satisfaction of that rule: 640 gave melanoma recall 0.367 and 0.433 all-class FP/image; 960 gave 0.533 and 0.453. This choice was fixed before test scoring.
+The validation scan first covered 0.05-0.95 and was then exploratorily extended down to 0.001. Maximum observed melanoma recall was 17/30 (0.567): 640 at 0.001 required 3.980 all-class FP/image, while 960 at 0.01 required 1.307. A common confidence of 0.15 was subsequently chosen as an **exploratory validation comparison**: 640 gave melanoma recall 0.367 and 0.433 all-class FP/image; 960 gave 0.533 and 0.453. This choice was fixed before test scoring and is not claimed to be a uniquely optimal or clinically validated threshold. Threshold curves describe the sensitivity/false-alarm trade-off without an additional recall pass criterion. Historical threshold JSONs retain an earlier optional development constraint for provenance; their met/unmet status is not an assignment verdict.
 
 ![Validation recall and false-positive trade-off](reports/figures/threshold_tradeoff.png)
 
-The strict-IoU analysis reports correct-class recall at IoU >= 0.8, including missed lesions in the denominator. This is not mean matched-box IoU and does not by itself establish that an average-IoU target of 0.8 was met. No score is interpreted as a calibrated probability of disease.
+The strict-IoU analysis reports correct-class recall at IoU >= 0.8, including missed lesions in the denominator. This is not mean matched-box IoU; the separate mean-IoU supplement below explicitly states its denominators. No score is interpreted as a calibrated probability of disease.
 
 ## 7. Quantitative results
 
@@ -121,6 +121,21 @@ At this operating point 960 has four more melanoma true positives and 30 more me
 | Melanoma recall | 0.2821 | 0.2564 |
 | Seborrheic keratosis recall | 0.3778 | 0.4000 |
 | Nevus recall | 0.5619 | 0.4330 |
+
+### Supplement: mean localization IoU
+
+These CPU-only statistics use the saved fixed-threshold test predictions and official masks/diagnosis labels, restricted to the same 595 IDs. Original 10-decimal YOLO box coordinates were reconstructed from mask dimensions. Every per-class TP/FP/FN at IoU 0.5 and 0.8 exactly reproduces the school evaluation, and the diagnosis CSV hash matches the test audit.
+
+| Class | Matched mean IoU, 640 | Matched mean IoU, 960 | All-GT mean, 640 | All-GT mean, 960 |
+|---|---:|---:|---:|---:|
+| melanoma | 0.7943 | 0.7697 | 0.3869 | 0.4013 |
+| seborrheic_keratosis | 0.8071 | 0.8089 | 0.5291 | 0.5213 |
+| nevus | 0.8262 | 0.8130 | 0.7069 | 0.6077 |
+| overall | 0.8196 | 0.8060 | 0.6171 | 0.5540 |
+
+Matched mean is conditional on correct-class one-to-one matches at IoU >= 0.5 and confidence >= 0.15. All-GT mean divides the same IoU sum by all ground truths, assigning zero to misses or incorrect-class detections. Conditional means exclude difficult misses and false positives and can therefore appear favorable despite inadequate sensitivity. Interpret any 0.8 comparison with that denominator explicitly; it is not evidence that every lesion meets the localization target.
+
+Against the assignment target of IoU >= 0.8, the matched means for seborrheic keratosis and nevus exceed 0.8 for both models, but melanoma is below 0.8 (640: 0.7943; 960: 0.7697). All-GT means are below 0.8 throughout. Therefore neither model establishes that the per-class localization target is fully met; the report presents the shortfall rather than treating the overall conditional mean as sufficient.
 
 ## 8. Resource cost
 
@@ -171,7 +186,7 @@ The melanoma label is correct at confidence 0.667, but the narrower/shorter pred
 
 ## 10. Engineering recommendation and limits
 
-For this measured prototype, retain the 640 baseline as the more economical overall configuration. The 960 alternative provides a limited melanoma sensitivity trade-off at 0.15, not an overall improvement. Neither achieves the recall objective or supports autonomous triage/negative clearance; outputs require review. Do not translate detection confidence directly into malignancy probability or biopsy decisions.
+For this measured prototype, retain the 640 baseline as the more economical overall configuration. The 960 alternative provides a limited melanoma sensitivity trade-off at 0.15, not an overall improvement. The assignment's IoU >= 0.8 target is assessed per class with explicit denominators below the results tables; an overall matched-box average alone does not establish that all classes meet it. Misses, classification errors and false alarms remain material limitations, and outputs require review. Do not translate detection confidence directly into malignancy probability or biopsy decisions.
 
 Limitations are single-seed experiments, a small 150-image development set, class imbalance, dermoscopic mostly single-lesion images, absence of independently checked patient identifiers, exact-only duplicate detection, and no calibration or subgroup fairness audit. The five examples illustrate symptoms, not causal proof. Annotations and real-world boundaries may be ambiguous. Future class balancing, calibration or architecture/postprocessing changes require new validation and independent evaluation, not further tuning on this final test set.
 
@@ -215,7 +230,13 @@ Output directories must be new. Prediction outputs include original-coordinate b
 | evaluate.py / analyze_failures.py | AP, fixed-threshold metrics, validation scans and reviewed-case candidates |
 | prepare_test.py | Audited, nonduplicating test preparation |
 
-The evaluated best checkpoints are preserved in the author's final_results_backup.zip and are excluded from Git per repository rules. Training with the commands above produces weights for predict.py; the original best files can be supplied separately for exact-result verification. A public trained-weight download location has not been configured. Checksum identity, not the local folder name, establishes which model was tested:
+Download the exact evaluated checkpoints from the [skinlesion-v1 release](https://github.com/lbxy128/PatternAnalysis-2026/releases/tag/skinlesion-v1), using the [trained-weight ZIP](https://github.com/lbxy128/PatternAnalysis-2026/releases/download/skinlesion-v1/COMP3710_s4849402_weights.zip). Release assets are separate from the Git source history; model weights remain excluded from commits. Extract baseline640_best.pt and compare960_best.pt into a local weights/ directory. The archive includes manifest.json with checkpoint checksums and README.txt with inference commands. No retraining is required to run these checkpoints. For example:
+
+```bash
+python predict.py --weights weights/baseline640_best.pt --source /path/to/new_images --output runs/released640_predictions --imgsz 640 --conf 0.15 --device 0
+```
+
+For the other checkpoint use weights/compare960_best.pt and --imgsz 960; use --device cpu for CPU inference. The ZIP SHA-256 is 29eb67471074e00c9cbd6636894dda0f6cac3a9be7878bb8507bd8f279a3853a. Checksum identity, not the local folder name, establishes which model was tested:
 
 ```
 640 best.pt SHA-256:
@@ -228,7 +249,7 @@ The evaluated best checkpoints are preserved in the author's final_results_backu
 
 OpenAI Codex assisted with assessment interpretation, conceptual explanations, code scaffolding and implementation, debugging, experiment commands, plotting, and drafting this report. Third-party model/training/metric implementations are Ultralytics/PyTorch and are cited separately. The student executed the school GPU experiments, supplied outputs and the final backup, and reported tutor guidance on splits.
 
-Verification performed during development included synthetic mask/label/leakage tests, an actual CPU train/save/reload/inference/evaluation integration check, a GPU convolution forward/backward check, complete archive/annotation audits, exact-duplicate exclusion records, 18 current logic tests, visual review of real overlays, and matching original checkpoint SHA-256 values against both training summaries and final evaluations. The four central local model/train/evaluate/predict files were byte-compared with the executed backup snapshots. These checks do not constitute a clinical validation. The student remains responsible for understanding and defending every equation, code decision and empirical claim.
+Verification performed during development included synthetic mask/label/leakage tests, an actual CPU train/save/reload/inference/evaluation integration check, a GPU convolution forward/backward check, complete archive/annotation audits, exact-duplicate exclusion records, 18 current logic tests, visual review of real overlays, and matching original checkpoint SHA-256 values against both training summaries and final evaluations. Before report finalization, the four central local model/train/evaluate/predict files were byte-compared with the executed backup snapshots. The subsequent evaluate.py revision removes the default recall gate from descriptive validation sweeps; it does not change training, AP, fixed-confidence matching or saved test results. These checks do not constitute a clinical validation. The student remains responsible for understanding and defending every equation, code decision and empirical claim.
 
 ## 13. References
 

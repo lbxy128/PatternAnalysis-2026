@@ -139,7 +139,12 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result['overall']['fp'], 1)
         self.assertEqual(result['overall']['fn'], 1)
         self.assertEqual(result['overall']['recall'], 0.5)
-        self.assertEqual(choose_threshold(pred, gt, {'min_recall': 0.9})['status'], 'unmet')
+        sweep = choose_threshold(pred, gt)
+        self.assertEqual(sweep['status'], 'descriptive')
+        self.assertIsNone(sweep['selected'])
+        self.assertNotIn('min_recall', sweep['policy'])
+        self.assertEqual(sweep['curve'][0]['overall']['recall'], 0.5)
+        self.assertEqual(choose_threshold(pred, gt, {'min_recall': 0.75})['status'], 'unmet')
 
     def test_wrong_class_is_fp_and_fn(self):
         gt = [{'image_id': 'a', 'detections': [{'class_id': 0, 'xyxy': [0, 0, 10, 10]}]}]

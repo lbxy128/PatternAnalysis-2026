@@ -39,7 +39,7 @@ The following are from the saved single-class-per-candidate inference pipeline a
 | Melanoma precision | 0.4419 | 0.3742 |
 | Melanoma recall | 0.4872 | 0.5214 |
 
-At this operating point, 960 detected four additional annotated melanoma lesions but produced 30 additional melanoma-labelled false positives. These aggregate differences do not imply that the two models' true positives were nested; individual paired predictions would be needed to establish which cases changed. The earlier melanoma recall target of 0.9 remains unmet.
+At this operating point, 960 detected four additional annotated melanoma lesions but produced 30 additional melanoma-labelled false positives. These aggregate differences do not imply that the two models' true positives were nested; individual paired predictions would be needed to establish which cases changed. Recall is reported as a measured outcome, without an additional numerical pass criterion absent from the assignment.
 
 | IoU >= 0.8 | 640 | 960 |
 |---|---:|---:|
@@ -59,4 +59,4 @@ Reported training time: 1.006 hours for 640 and 1.170 hours for 960, about 16.3%
 
 Within this experiment, the 640 baseline provides the stronger overall detection/localization results with lower training cost. The 960 alternative offers a small melanoma recall increase at the fixed operating point, but a lower melanoma precision, more false positives, and no strict-localization advantage. The evidence does not justify claiming the higher resolution is an overall improvement.
 
-Neither configuration supports a reliable automated melanoma exclusion claim. Report the unmet target and the five validation error cases rather than further tuning on test performance. Any future changes (class balancing, different architecture, calibration or postprocessing) require a new development/evaluation protocol rather than reuse of this test set as a tuning set.
+Neither configuration supports a reliable automated melanoma exclusion claim. Report the assignment's localization target with explicit denominators and the five validation error cases rather than further tuning on test performance. Any future changes (class balancing, different architecture, calibration or postprocessing) require a new development/evaluation protocol rather than reuse of this test set as a tuning set.

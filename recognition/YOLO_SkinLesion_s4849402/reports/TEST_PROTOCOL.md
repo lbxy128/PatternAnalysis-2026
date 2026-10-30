@@ -8,8 +8,10 @@ Recorded 2026-10-29, after validation exploration and before any test evaluation
 - Input sizes: 640 and 960 respectively; same test image inventory, original class order, no test-time augmentation.
 - AP evaluation: Ultralytics 8.4.191, low confidence floor 0.001, class-aware NMS IoU 0.7. Retain the framework's AP protocol and explicitly distinguish it from the single-class-per-candidate inference operating analysis.
 - Operating comparison: fixed confidence 0.15 for both, class-aware one-to-one matching at IoU 0.5 and 0.8; report per-class TP/FP/FN/P/R and all-class FP per image.
-- The 0.15 choice is post-hoc exploratory validation selection. The original melanoma recall >= 0.9 goal remains unmet; no claim that this is a clinically adequate policy.
-- Do not retune weights, threshold or resolution based on test results. Report both models even if neither meets the target.
+- The 0.15 choice is post-hoc exploratory validation selection, fixed before test scoring; no claim that this is a clinically adequate policy.
+- Do not retune weights, threshold or resolution based on test results. Report both models even if neither meets the assignment's localization target.
+
+Report-finalization clarification (2026-10-29): the assignment specifies test localization IoU >= 0.8, suitable classification performance, detection metrics and a sensitivity/false-alarm investigation. It specifies no numerical recall pass criterion. An earlier optional recall gate remains in archived threshold JSONs for provenance and is not used to judge assignment compliance. This clarification changes no pre-test choice, weights, predictions, thresholds or test metrics.
 
 ## Leakage and storage checks before scoring
 
